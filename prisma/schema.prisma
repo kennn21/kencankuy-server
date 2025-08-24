@@ -1,0 +1,98 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PlaceCategory {
+  ARTSY
+  FOODIE
+  ADVENTUROUS
+  RELAXING
+  ROMANTIC
+  SPORTY
+  ENTERTAINMENT
+}
+
+// New enum for the role of a place in a date plan
+enum ActivityType {
+  MAIN_ACTIVITY
+  DINNER
+  DESSERT
+  DRINKS
+  COFFEE
+}
+
+// The main record for a generated date plan
+model DatePlan {
+  id        Int      @id @default(autoincrement())
+  theme     PlaceCategory
+  budget    Int?
+  createdAt DateTime @default(now())
+
+  // A DatePlan is made up of multiple steps
+  steps DatePlanStep[]
+}
+
+// This is the join table that defines the sequence
+model DatePlanStep {
+  id           Int          @id @default(autoincrement())
+  stepNumber   Int          // e.g., 1, 2, 3
+  activityType ActivityType
+
+  datePlan   DatePlan     @relation(fields: [datePlanId], references: [id])
+  datePlanId Int
+
+  place      CuratedPlace @relation(fields: [placeId], references: [id])
+  placeId    Int
+
+  @@unique([datePlanId, stepNumber]) // Ensures each step number is unique per plan
+}
+
+
+model CuratedPlace {
+  id              Int           @id @default(autoincrement())
+  googlePlaceId   String        @unique
+  name            String
+  address         String?
+  latitude        Float
+  longitude       Float
+  category        PlaceCategory
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  activityType    ActivityType? // Add this optional field
+  
+  // A place can be part of many different date plan steps
+  datePlanSteps DatePlanStep[]
+
+  savedBy         User[]
+  extension       CuratedPlaceExtension?
+}
+
+// User model to mirror Firebase user data`
+model User {
+  id          String   @id
+  email       String   @unique
+  name        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  savedPlaces CuratedPlace[]
+}
+
+// New table for extra, business-related information
+model CuratedPlaceExtension {
+  id           Int   @id @default(autoincrement())
+  priceMin     Int? // Optional minimum price estimate
+  priceMax     Int? // Optional maximum price estimate
+  boostedRate  Float @default(1.0) // Default rate is 1.0 (no boost)
+  
+  // Establishes the one-to-one link
+  place        CuratedPlace @relation(fields: [placeId], references: [id])
+  placeId      Int          @unique // Foreign key, must be unique
+}

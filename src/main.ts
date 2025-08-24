@@ -1,0 +1,24 @@
+// src/main.ts
+import { ValidationPipe } from '@nestjs/common'; // 1. Import it
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+
+  // This single line enables the shutdown hooks
+  app.enableShutdownHooks();
+
+  app.enableCors();
+
+  // 2. Add the global pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Strips away any properties that don't have decorators
+      forbidNonWhitelisted: true, // Throws an error if unknown properties are sent
+    }),
+  );
+
+  await app.listen(8081);
+}
+bootstrap();
