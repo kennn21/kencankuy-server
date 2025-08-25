@@ -23,6 +23,13 @@ type PlaceQueryResult = CuratedPlace & {
   extension: CuratedPlaceExtension | null;
 };
 
+// 1. Abstracting hardcoded values
+const ITINERARY_CONFIG = [
+  { activityType: ActivityType.MAIN_ACTIVITY, category: null, radiusKm: 50 },
+  { activityType: ActivityType.DINNER, category: 'FOODIE', radiusKm: 20 },
+  { activityType: ActivityType.DESSERT, category: 'RELAXING', radiusKm: 10 },
+];
+
 @Injectable()
 export class DatePlanService {
   private readonly logger = new Logger(DatePlanService.name);
@@ -34,103 +41,79 @@ export class DatePlanService {
       const { lat, lng, category, budget } = query;
       this.logger.log(`Generating plan for: ${category} near (${lat}, ${lng})`);
 
-      // Step 1: Find the Main Activity
-      const mainActivity = await this._findPlace({
-        lat,
-        lng,
-        category: category.toUpperCase() as PrismaPlaceCategory,
-        radiusKm: 50,
-        budget,
-      });
-      if (!mainActivity)
-        throw new NotFoundException('No suitable main activity.');
+      // 2. Dynamic Itinerary Building
+      const planSteps: {
+        stepNumber: number;
+        activityType: ActivityType;
+        placeId: number;
+      }[] = [];
+      let currentLat = lat;
+      let currentLng = lng;
+      const excludeIds: number[] = [];
 
-      // Step 2: Find a Dinner spot near the Main Activity
-      const dinner = await this._findPlace({
-        lat: mainActivity.latitude,
-        lng: mainActivity.longitude,
-        category: 'FOODIE',
-        radiusKm: 20, // smaller radius
-        budget,
-        excludeIds: [mainActivity.id], // Exclude the first place
-      });
-      if (!dinner)
-        throw new NotFoundException(
-          'Could not find a suitable dinner spot nearby.',
-        );
+      for (const stepConfig of ITINERARY_CONFIG) {
+        const stepCategory = (stepConfig.category ||
+          category.toUpperCase()) as PrismaPlaceCategory;
 
-      // Step 3: Find a Dessert/Drinks spot near Dinner
-      const dessert = await this._findPlace({
-        lat: dinner.latitude,
-        lng: dinner.longitude,
-        category: 'RELAXING', // Cafes or bars often fall under this
-        radiusKm: 10, // even smaller radius
-        budget,
-        excludeIds: [mainActivity.id, dinner.id], // Exclude both previous places
-      });
-      if (!dessert)
-        throw new NotFoundException(
-          'Could not find a suitable dessert or drinks spot nearby.',
-        );
+        const place = await this._findPlace({
+          lat: currentLat,
+          lng: currentLng,
+          category: stepCategory,
+          radiusKm: stepConfig.radiusKm,
+          budget,
+          excludeIds,
+        });
 
-      // Step 4: Assemble and save the plan in a single transaction
+        if (!place) {
+          throw new NotFoundException(
+            `Could not find a suitable place for step: ${stepConfig.activityType}.`,
+          );
+        }
+
+        planSteps.push({
+          stepNumber: planSteps.length + 1,
+          activityType: stepConfig.activityType,
+          placeId: place.id,
+        });
+
+        // Update location for the next search
+        currentLat = place.latitude;
+        currentLng = place.longitude;
+        excludeIds.push(place.id);
+      }
+
+      // 3. Assemble and save the dynamically created plan
       const datePlan = await this.prisma.datePlan.create({
         data: {
           theme: category.toUpperCase() as PrismaPlaceCategory,
           budget,
           steps: {
-            create: [
-              {
-                stepNumber: 1,
-                activityType: ActivityType.MAIN_ACTIVITY,
-                placeId: mainActivity.id,
-              },
-              {
-                stepNumber: 2,
-                activityType: ActivityType.DINNER,
-                placeId: dinner.id,
-              },
-              {
-                stepNumber: 3,
-                activityType: ActivityType.DESSERT,
-                placeId: dessert.id,
-              },
-            ],
+            create: planSteps,
           },
         },
         include: {
           steps: {
-            orderBy: {
-              stepNumber: 'asc',
-            },
-            include: {
-              place: {
-                include: {
-                  extension: true,
-                },
-              },
-            },
+            orderBy: { stepNumber: 'asc' },
+            include: { place: { include: { extension: true } } },
           },
         },
       });
 
       return datePlan;
     } catch (error) {
-      // This is the standard, safe way to handle all errors
       if (error instanceof Error) {
+        // Log the detailed error for developers
         this.logger.error(
           `Failed to generate date plan: ${error.message}`,
           error.stack,
         );
       } else {
-        this.logger.error(
-          'An unexpected error value was thrown during date plan generation',
-          error,
-        );
+        this.logger.error('An unexpected error value was thrown', error);
       }
-      // Let NestJS handle the final HTTP response
+
+      // Return a generic, safe error message to the user
       throw new InternalServerErrorException(
-        'Could not generate a date plan. ' + error.message,
+        'Could not generate a date plan. Please try again later.',
       );
     }
   }

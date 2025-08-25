@@ -169,6 +169,12 @@ export class CuratedPlacesService {
             );
             const priceRange = this._generatePriceRange(); // TODO: Disable for production
 
+            // Get the first photo reference, if one exists
+            const photoReference =
+              place.photos && place.photos.length > 0
+                ? place.photos[0].photo_reference
+                : null;
+
             if (place.geometry)
               await this.prisma.curatedPlace.create({
                 data: {
@@ -177,6 +183,7 @@ export class CuratedPlacesService {
                   address: place.formatted_address,
                   latitude: place.geometry.location.lat,
                   longitude: place.geometry.location.lng,
+                  photoReference: photoReference,
                   category: category.toUpperCase() as PrismaPlaceCategory,
                   activityType: inferredActivityType, // Save the inferred type
                   extension: {
