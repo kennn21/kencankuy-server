@@ -1,4 +1,3 @@
-// src/google-places/google-places.controller.ts
 import { Controller, Post, Body, ValidationPipe } from '@nestjs/common';
 import { GooglePlacesService } from './google-places.service';
 import { SearchByCategoryDto } from './dto/search-by-category.dto';

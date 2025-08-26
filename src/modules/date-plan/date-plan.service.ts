@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   InternalServerErrorException,
@@ -17,6 +13,7 @@ import {
   CuratedPlaceExtension,
 } from '@prisma/client';
 import { Prisma } from '@prisma/client';
+import { GenerateDatePlanResponseDto } from './dto/generate-date-plan-response.dto';
 
 // Define a type that matches the shape of your raw query result
 type PlaceQueryResult = CuratedPlace & {
@@ -36,7 +33,9 @@ export class DatePlanService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async generateDatePlan(query: GeneratePlanDto) {
+  async generateDatePlan(
+    query: GeneratePlanDto,
+  ): Promise<GenerateDatePlanResponseDto> {
     try {
       const { lat, lng, category, budget } = query;
       this.logger.log(`Generating plan for: ${category} near (${lat}, ${lng})`);
@@ -165,5 +164,24 @@ export class DatePlanService {
       `;
 
     return results[0] || null;
+  }
+
+  async findPlanById(id: number) {
+    this.logger.log(`Fetching date plan with ID: ${id}`);
+    return this.prisma.datePlan.findUnique({
+      where: { id },
+      include: {
+        steps: {
+          orderBy: { stepNumber: 'asc' },
+          include: {
+            place: {
+              include: {
+                extension: true,
+              },
+            },
+          },
+        },
+      },
+    });
   }
 }

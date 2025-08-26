@@ -1,4 +1,3 @@
-// src/places/places.module.ts
 import { Module } from '@nestjs/common';
 import { CuratedPlacesController } from './curated-places.controller';
 import { CuratedPlacesService } from './curated-places.service';

@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-// src/places/places.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import {
   ActivityType,
