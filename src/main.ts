@@ -7,11 +7,12 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // This single line enables the shutdown hooks
-  app.enableShutdownHooks();
-
   app.enableCors({
-    // Add the names of the headers you want the browser to expose
+    origin: [
+      'https://www.kencankuy.id', // Your production domain
+      'http://localhost:3001', // Your local development domain
+    ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
   });
 
@@ -26,6 +27,6 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(8080);
+  await app.listen(process.env.PORT || 8080);
 }
 bootstrap();
