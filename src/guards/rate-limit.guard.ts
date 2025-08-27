@@ -7,6 +7,7 @@ import {
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ThrottlerException } from '@nestjs/throttler';
+import { Request } from 'express';
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
@@ -14,18 +15,26 @@ export class RateLimitGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const http = context.switchToHttp();
-    const request = http.getRequest();
-    const response = http.getResponse(); // Get the response object
+    const request: Request = http.getRequest();
+    const response = http.getResponse();
 
-    const ip = request.ip;
+    // --- THIS IS THE UPDATED LOGIC ---
+    // Read the IP from the 'X-Forwarded-For' header, or fall back to request.ip
+    const ip =
+      (request.headers['x-forwarded-for'] as string)?.split(',')[0] ||
+      request.ip;
+
+    if (!ip) {
+      // If no IP can be determined, allow the request to prevent blocking valid users
+      return true;
+    }
+
     const key = `rate-limit:${ip}`;
     const limit = 5;
 
     const count = (await this.cacheManager.get<number>(key)) || 0;
     const remaining = Math.max(0, limit - (count + 1));
 
-    // --- NEW LOGIC IS HERE ---
-    // Attach the headers to the response
     response.header('X-RateLimit-Limit', limit);
     response.header('X-RateLimit-Remaining', remaining);
 

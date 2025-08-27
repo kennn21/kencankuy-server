@@ -2,9 +2,10 @@
 import { ValidationPipe } from '@nestjs/common'; // 1. Import it
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // This single line enables the shutdown hooks
   app.enableShutdownHooks();
@@ -14,7 +15,10 @@ async function bootstrap() {
     exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
   });
 
-  // 2. Add the global pipe
+  // Tell NestJS to trust the proxy headers from Vercel
+  app.set('trust proxy', 1);
+
+  // Add the global pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // Strips away any properties that don't have decorators
