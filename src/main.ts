@@ -9,7 +9,10 @@ async function bootstrap() {
   // This single line enables the shutdown hooks
   app.enableShutdownHooks();
 
-  app.enableCors();
+  app.enableCors({
+    // Add the names of the headers you want the browser to expose
+    exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+  });
 
   // 2. Add the global pipe
   app.useGlobalPipes(

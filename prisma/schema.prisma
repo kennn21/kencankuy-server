@@ -65,6 +65,8 @@ model CuratedPlace {
   longitude       Float
   category        PlaceCategory
   photoReference  String? 
+  cachedPhotoUrl  String? 
+  needsPhotoProcessing Boolean @default(false) 
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   activityType    ActivityType? // Add this optional field

@@ -9,6 +9,7 @@ import { validCategories } from '../google-places/dto/search-by-category.dto';
 import { GooglePlacesService } from '../google-places/google-places.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddressType, Place } from '@googlemaps/google-maps-services-js';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class CuratedPlacesService {
@@ -17,6 +18,7 @@ export class CuratedPlacesService {
   constructor(
     private readonly googlePlacesService: GooglePlacesService,
     private readonly prisma: PrismaService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   /**
@@ -128,9 +130,13 @@ export class CuratedPlacesService {
     return null;
   }
 
+  /**
+   * Finds new places via Google API, saves their info and photoReference,
+   * and marks them for processing by the throttled photo worker.
+   */
   async findAndStorePlaces() {
     this.logger.log(
-      'Starting job to find and store new places from Google API...',
+      'Starting job to find new places and add them to the photo processing queue...',
     );
     const summary = { totalNewPlaces: 0, details: {} };
 
@@ -150,7 +156,7 @@ export class CuratedPlacesService {
       }
 
       for (const place of placesFromGoogle) {
-        if (!place.place_id) continue;
+        if (!place.place_id || !place.geometry?.location) continue;
 
         const existingPlace = await this.prisma.curatedPlace.findUnique({
           where: { googlePlaceId: place.place_id },
@@ -158,44 +164,42 @@ export class CuratedPlacesService {
 
         if (!existingPlace) {
           try {
-            // Infer the activity type before creating the record
             const inferredActivityType = this._inferActivityType(
               place,
               category as PlaceCategory,
             );
-            const priceRange = this._generatePriceRange(); // TODO: Disable for production
+            const priceRange = this._generatePriceRange();
+            const photoReference = place.photos?.[0]?.photo_reference || null;
 
-            // Get the first photo reference, if one exists
-            const photoReference =
-              place.photos && place.photos.length > 0
-                ? place.photos[0].photo_reference
-                : null;
-
-            if (place.geometry)
-              await this.prisma.curatedPlace.create({
-                data: {
-                  googlePlaceId: place.place_id,
-                  name: place.name ?? '',
-                  address: place.formatted_address,
-                  latitude: place.geometry.location.lat,
-                  longitude: place.geometry.location.lng,
-                  photoReference: photoReference,
-                  category: category.toUpperCase() as PrismaPlaceCategory,
-                  activityType: inferredActivityType, // Save the inferred type
-                  extension: {
-                    create: {
-                      priceMin: priceRange.priceMin, // TODO: Disable for production
-                      priceMax: priceRange.priceMax, // TODO: Disable for production
-                    },
+            await this.prisma.curatedPlace.create({
+              data: {
+                googlePlaceId: place.place_id,
+                name: place.name ?? 'Unknown Place',
+                address: place.formatted_address,
+                latitude: place.geometry.location.lat,
+                longitude: place.geometry.location.lng,
+                category: category.toUpperCase() as PrismaPlaceCategory,
+                activityType: inferredActivityType,
+                photoReference: photoReference,
+                needsPhotoProcessing: !!photoReference, // Mark for processing
+                extension: {
+                  create: {
+                    priceMin: priceRange.priceMin,
+                    priceMax: priceRange.priceMax,
                   },
                 },
-              });
+              },
+            });
             newPlacesCount++;
-            this.logger.log(`Added new place: "${place.name}"`);
           } catch (error) {
             if (error instanceof Error) {
               this.logger.error(
                 `Failed to add place "${place.name}". Error: ${error.message}`,
+              );
+            } else {
+              this.logger.error(
+                `An unknown error occurred while adding place "${place.name}"`,
+                error,
               );
             }
           }

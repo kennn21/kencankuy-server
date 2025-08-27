@@ -6,10 +6,12 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { DatePlanService } from './date-plan.service';
 import { GenerateDatePlanResponseDto } from './dto/generate-date-plan-response.dto';
 import { GeneratePlanDto } from './dto/generate-plan.dto';
+import { RateLimitGuard } from 'src/guards/rate-limit.guard';
 
 @Controller('date-plan')
 export class DatePlanController {
@@ -27,6 +29,7 @@ export class DatePlanController {
 
   // Generate Date Plan
   @Post('generate')
+  @UseGuards(RateLimitGuard)
   async generateDatePlan(
     @Body() body: GeneratePlanDto,
   ): Promise<GenerateDatePlanResponseDto | undefined> {
