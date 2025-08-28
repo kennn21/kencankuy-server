@@ -10,14 +10,18 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'https://www.kencankuy.id', // Your production domain
+      'https://kencankuy.id', // no www
+      'kencankuy.id', // no protocol
       'http://localhost:3001', // Your local development domain
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+    exposedHeaders: [
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'Content-Type',
+      'Authorization',
+    ],
   });
-
-  // Tell NestJS to trust the proxy headers from Vercel
-  app.set('trust proxy', 1);
 
   // Add the global pipe
   app.useGlobalPipes(
