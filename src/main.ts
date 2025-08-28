@@ -10,9 +10,8 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'https://www.kencankuy.id', // Your production domain
-      'https://kencankuy.id', // no www
-      'kencankuy.id', // no protocol
-      'http://localhost:3001', // Your local development domain
+      'http://localhost:3000', // Your local development domain
+      // 'http://localhost:3001', // Your local development domain
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     exposedHeaders: [
