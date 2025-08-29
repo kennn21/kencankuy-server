@@ -38,6 +38,9 @@ model DatePlan {
 
   // A DatePlan is made up of multiple steps
   steps DatePlanStep[]
+
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
 }
 
 // This is the join table that defines the sequence
@@ -91,6 +94,7 @@ model User {
 
 
   savedPlaces CuratedPlace[]
+  datePlans DatePlan[]
 }
 
 // New table for extra, business-related information

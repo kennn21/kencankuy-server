@@ -8,10 +8,13 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { DecodedIdToken } from 'firebase-admin/lib/auth/token-verifier';
+import { User } from 'src/decorators/user.decorator';
+import { OptionalFirebaseAuthGuard } from 'src/guards/optional-firebase-auth.guard';
+import { RateLimitGuard } from 'src/guards/rate-limit.guard';
 import { DatePlanService } from './date-plan.service';
 import { GenerateDatePlanResponseDto } from './dto/generate-date-plan-response.dto';
 import { GeneratePlanDto } from './dto/generate-plan.dto';
-import { RateLimitGuard } from 'src/guards/rate-limit.guard';
 
 @Controller('date-plan')
 export class DatePlanController {
@@ -29,10 +32,15 @@ export class DatePlanController {
 
   // Generate Date Plan
   @Post('generate')
-  @UseGuards(RateLimitGuard)
+  @UseGuards(RateLimitGuard, OptionalFirebaseAuthGuard)
   async generateDatePlan(
+    @User() user: DecodedIdToken,
     @Body() body: GeneratePlanDto,
   ): Promise<GenerateDatePlanResponseDto | undefined> {
-    return await this.datePlanService.generateDatePlan(body);
+    console.log(user);
+    return await this.datePlanService.generateDatePlan({
+      ...body,
+      userId: user?.uid,
+    });
   }
 }

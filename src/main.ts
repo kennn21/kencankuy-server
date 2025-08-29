@@ -3,19 +3,10 @@ import { ValidationPipe } from '@nestjs/common'; // 1. Import it
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
-  // Add the global pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Strips away any properties that don't have decorators
-      forbidNonWhitelisted: true, // Throws an error if unknown properties are sent
-    }),
-  );
-
-  await app.listen(process.env.PORT || 8080);
 
   app.enableCors({
     origin: [
@@ -31,5 +22,27 @@ async function bootstrap() {
       'Authorization',
     ],
   });
+
+  // Add the global pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Strips away any properties that don't have decorators
+      forbidNonWhitelisted: true, // Throws an error if unknown properties are sent
+    }),
+  );
+
+  const config = new DocumentBuilder()
+    .setTitle('KencanKuy API')
+    .setDescription(
+      'The official API documentation for the KencanKuy application.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth() // If you use Bearer token auth
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document); // The UI will be available at /api
+
+  await app.listen(process.env.PORT || 8080);
 }
 bootstrap();

@@ -10,6 +10,10 @@ import { PhotoWorkerModule } from './modules/photo-worker/photo-worker.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import { RateLimitModule } from './modules/rate-limit/rate-limit.module';
+import { UsersModule } from './modules/users/users.module';
+import { APP_GUARD } from '@nestjs/core';
+import { FirebaseAuthGuard } from './guards/firebase-auth.guard';
+import { FirebaseModule } from './modules/firebase/firebase.module';
 
 @Module({
   imports: [
@@ -30,8 +34,15 @@ import { RateLimitModule } from './modules/rate-limit/rate-limit.module';
     SupabaseModule,
     PhotoWorkerModule,
     RateLimitModule,
+    UsersModule,
+    FirebaseModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: FirebaseAuthGuard,
+    },
+  ],
 })
 export class AppModule {}

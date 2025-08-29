@@ -37,7 +37,7 @@ export class DatePlanService {
     query: GeneratePlanDto,
   ): Promise<GenerateDatePlanResponseDto> {
     try {
-      const { lat, lng, category, budget } = query;
+      const { lat, lng, category, budget, userId } = query;
       this.logger.log(`Generating plan for: ${category} near (${lat}, ${lng})`);
 
       // 2. Dynamic Itinerary Building
@@ -84,6 +84,7 @@ export class DatePlanService {
       // 3. Assemble and save the dynamically created plan
       const datePlan = await this.prisma.datePlan.create({
         data: {
+          userId: userId,
           theme: category.toUpperCase() as PrismaPlaceCategory,
           budget,
           steps: {
