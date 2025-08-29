@@ -7,6 +7,16 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Add the global pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // Strips away any properties that don't have decorators
+      forbidNonWhitelisted: true, // Throws an error if unknown properties are sent
+    }),
+  );
+
+  await app.listen(process.env.PORT || 8080);
+
   app.enableCors({
     origin: [
       'https://www.kencankuy.id', // Your production domain
@@ -21,15 +31,5 @@ async function bootstrap() {
       'Authorization',
     ],
   });
-
-  // Add the global pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true, // Strips away any properties that don't have decorators
-      forbidNonWhitelisted: true, // Throws an error if unknown properties are sent
-    }),
-  );
-
-  await app.listen(process.env.PORT || 8080);
 }
 bootstrap();
