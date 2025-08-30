@@ -1,19 +1,19 @@
 // src/app.module.ts
+import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { CuratedPlacesModule } from './modules/curated-places/curated-places.module';
-import { GooglePlacesModule } from './modules/google-places/google-places.module';
-import { PrismaModule } from './modules/prisma/prisma.module';
-import { DatePlanModule } from './modules/date-plan/date-plan.module';
-import { SupabaseModule } from './modules/supabase/supabase.module';
-import { PhotoWorkerModule } from './modules/photo-worker/photo-worker.module';
-import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-store';
-import { RateLimitModule } from './modules/rate-limit/rate-limit.module';
-import { UsersModule } from './modules/users/users.module';
 import { APP_GUARD } from '@nestjs/core';
-import { FirebaseAuthGuard } from './guards/firebase-auth.guard';
+import { redisStore } from 'cache-manager-redis-store';
+import { OptionalFirebaseAuthGuard } from './guards/optional-firebase-auth.guard';
+import { CuratedPlacesModule } from './modules/curated-places/curated-places.module';
+import { DatePlanModule } from './modules/date-plan/date-plan.module';
 import { FirebaseModule } from './modules/firebase/firebase.module';
+import { GooglePlacesModule } from './modules/google-places/google-places.module';
+import { PhotoWorkerModule } from './modules/photo-worker/photo-worker.module';
+import { PrismaModule } from './modules/prisma/prisma.module';
+import { RateLimitModule } from './modules/rate-limit/rate-limit.module';
+import { SupabaseModule } from './modules/supabase/supabase.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -41,7 +41,7 @@ import { FirebaseModule } from './modules/firebase/firebase.module';
   providers: [
     {
       provide: APP_GUARD,
-      useClass: FirebaseAuthGuard,
+      useClass: OptionalFirebaseAuthGuard,
     },
   ],
 })

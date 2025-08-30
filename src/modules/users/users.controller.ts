@@ -1,48 +1,50 @@
-import {
-  Controller,
-  Post,
-  Headers,
-  UnauthorizedException,
-  Body,
-  UseGuards,
-  Patch,
-  Req,
-} from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Patch, Get } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { LinkPartnerDto } from './dto/link-partner.dto';
 import { FirebaseAuthGuard } from 'src/guards/firebase-auth.guard';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { User } from 'src/decorators/user.decorator';
+import { DecodedIdToken } from 'firebase-admin/auth';
 
 @Controller('users')
+@UseGuards(FirebaseAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post('sync')
-  async syncUser(@Headers('authorization') authHeader: string) {
-    if (!authHeader) throw new UnauthorizedException('No authorization header');
-    const token = authHeader.split('Bearer ')[1];
-    if (!token) throw new UnauthorizedException('Invalid token format');
-    return this.usersService.syncUser(token);
+  async syncUser(@User() user: DecodedIdToken) {
+    // The token is already verified by the guard. We just need the payload.
+    // The service can now be simplified to accept the decoded token payload.
+    return this.usersService.syncUserFromPayload(user);
   }
 
   @Post('link-partner')
   async linkPartner(
-    @Body() body: LinkPartnerDto & { userId: string }, // Assume userId is passed for now
+    @User() user: DecodedIdToken,
+    @Body() body: LinkPartnerDto,
   ) {
+    // The userId now comes from the trusted token, not the untrusted body
+    const userId = user.uid;
     return this.usersService.linkPartner(
-      body.userId,
+      userId,
       body.partnerEmail,
       body.partnerName,
     );
   }
 
-  @Patch('me') // PATCH is standard for partial updates
-  @UseGuards(FirebaseAuthGuard)
+  @Patch('me')
   async updateProfile(
-    @Req() request: any, // request will have the 'user' property from the guard
+    @User() user: DecodedIdToken, // 4. Cleaner way to get the user
     @Body() body: UpdateProfileDto,
   ) {
-    const userId = request.user.uid;
+    const userId = user.uid;
     return this.usersService.updateProfile(userId, body);
+  }
+
+  @Get('me')
+  async getMyProfile(@User() user: DecodedIdToken) {
+    // 5. Cleaner way to get the user
+    const userId = user.uid;
+    return this.usersService.findProfileById(userId);
   }
 }

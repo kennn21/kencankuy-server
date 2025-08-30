@@ -1,19 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { DecodedIdToken } from 'firebase-admin/auth';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async syncUser(token: string) {
-    const decodedToken = await admin.auth().verifyIdToken(token);
+  async syncUserFromPayload(decodedToken: DecodedIdToken) {
     const { uid, email, name } = decodedToken;
 
-    return this.prisma.user.upsert({
+    const existingUser = await this.prisma.user.findUnique({
       where: { id: uid },
-      update: { email, name },
-      create: { id: uid, email: email ?? '', name },
+    });
+
+    if (existingUser) {
+      return existingUser;
+    }
+
+    return this.prisma.user.create({
+      data: {
+        id: uid,
+        email: email ?? '',
+        name: name,
+      },
     });
   }
 
@@ -22,7 +31,6 @@ export class UsersService {
     partnerEmail: string,
     partnerName?: string,
   ) {
-    // Simply find the current user and update their partner fields
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -49,5 +57,16 @@ export class UsersService {
         partnerEmail: data.partnerEmail,
       },
     });
+  }
+
+  async findProfileById(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found.');
+    }
+    return user;
   }
 }

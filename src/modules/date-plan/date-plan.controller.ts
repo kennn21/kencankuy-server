@@ -15,10 +15,17 @@ import { RateLimitGuard } from 'src/guards/rate-limit.guard';
 import { DatePlanService } from './date-plan.service';
 import { GenerateDatePlanResponseDto } from './dto/generate-date-plan-response.dto';
 import { GeneratePlanDto } from './dto/generate-plan.dto';
+import { FirebaseAuthGuard } from 'src/guards/firebase-auth.guard';
 
 @Controller('date-plan')
 export class DatePlanController {
   constructor(private readonly datePlanService: DatePlanService) {}
+
+  @Get('my-plans')
+  @UseGuards(FirebaseAuthGuard)
+  async getMyPlans(@User() user: DecodedIdToken) {
+    return this.datePlanService.findPlansByUserId(user.uid);
+  }
 
   // Get Date Plan by ID
   @Get(':id')

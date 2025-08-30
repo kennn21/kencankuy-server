@@ -185,4 +185,20 @@ export class DatePlanService {
       },
     });
   }
+
+  async findPlansByUserId(userId: string) {
+    this.logger.log(`Fetching all plans for user ID: ${userId}`);
+    return this.prisma.datePlan.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }, // Show the newest plans first
+      include: {
+        steps: {
+          orderBy: { stepNumber: 'asc' },
+          include: {
+            place: true,
+          },
+        },
+      },
+    });
+  }
 }
