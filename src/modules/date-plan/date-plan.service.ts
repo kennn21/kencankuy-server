@@ -35,9 +35,10 @@ export class DatePlanService {
 
   async generateDatePlan(
     query: GeneratePlanDto,
+    userId?: string,
   ): Promise<GenerateDatePlanResponseDto> {
     try {
-      const { lat, lng, category, budget, userId } = query;
+      const { lat, lng, category, budget } = query;
       this.logger.log(`Generating plan for: ${category} near (${lat}, ${lng})`);
 
       // 2. Dynamic Itinerary Building
